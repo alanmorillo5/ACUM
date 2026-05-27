@@ -20,3 +20,10 @@
 - What I changed before approving: remove time parsing logic and background daemon. Only focus on on and off functions for now.
 - Verification: Ran the daemon with an echo command and check the daemon logs. Killed daemon with stop script
 - One thing I learned: AI sometimes forgets that something doesn't work.
+
+## Task 6 - Daemon Toggle
+- Breif: Add a toggle to turn the auto-update script on and off.
+- What Gemini proposed: Add a state file to track daemon state, add a script that toggles daemon on and off.
+- What I changed before approving: Nothing.
+- Verification: Tested toggle with active echo statements to check. Kill terminal and retest to ensure state preservation.
+- One thing I learned: Need to start killing the terminal to test if states preserve.

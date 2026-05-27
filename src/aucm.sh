@@ -6,10 +6,15 @@
 # Path to the database file (absolute path)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DB_FILE="$SCRIPT_DIR/../data/commands.db"
+STATE_FILE="$SCRIPT_DIR/../data/.aucm_state"
+LAST_RUN_FILE="$SCRIPT_DIR/../data/.last_run"
 
-# Ensure data directory exists
+# Ensure data directory and default state exist
 mkdir -p "$(dirname "$DB_FILE")"
 touch "$DB_FILE"
+if [[ ! -f "$STATE_FILE" ]]; then
+    echo "OFF" > "$STATE_FILE"
+fi
 
 # List all stored commands
 list_commands() {
@@ -98,17 +103,48 @@ run_all_updates() {
         echo "--------------------------------"
     done < "$DB_FILE"
 
+    # Record last run time
+    date +%s > "$LAST_RUN_FILE"
     echo "--- Update Sequence Complete ---"
+}
+
+# Toggle auto-update ON/OFF
+toggle_auto_update() {
+    local current_state
+    current_state=$(cat "$STATE_FILE" 2>/dev/null || echo "OFF")
+    
+    if [[ "$current_state" == "ON" ]]; then
+        echo "OFF" > "$STATE_FILE"
+        echo "Auto-update toggled OFF."
+    else
+        echo "ON" > "$STATE_FILE"
+        echo "Auto-update toggled ON."
+    fi
 }
 
 # Daemon loop that runs in the background
 daemon_loop() {
     # Default interval: 7 days in seconds (604800)
     local interval=604800
+    local poll_rate=60 # Check state every 60 seconds
     
     while true; do
-        run_all_updates >> "$(dirname "$DB_FILE")/daemon.log" 2>&1
-        sleep "$interval"
+        local state
+        state=$(cat "$STATE_FILE" 2>/dev/null || echo "OFF")
+        
+        if [[ "$state" == "ON" ]]; then
+            local now
+            now=$(date +%s)
+            local last_run
+            last_run=$(cat "$LAST_RUN_FILE" 2>/dev/null || echo 0)
+            local elapsed=$((now - last_run))
+            
+            if [[ $elapsed -ge $interval ]]; then
+                run_all_updates >> "$(dirname "$DB_FILE")/daemon.log" 2>&1
+            fi
+        fi
+        
+        sleep "$poll_rate"
     done
 }
 
