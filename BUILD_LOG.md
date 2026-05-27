@@ -41,3 +41,11 @@
 - What I changed before approving: Remove bulk processing, will get to that later.
 - Verification: Ran the dashboard and tried to add several malicious and invalid commands.
 - One thing I learned: The AI tried to test by adding an exteremely risky command, so don't always trust the tests.
+
+## Task 10 - Multiple Commands:
+- Brief: Allow multiple commands to be added/removed in a single request by splitting commands by an appropriate delimeter.
+- What Gemini proposed: Separate by comma, refector add_command and remove_command to iterate over a list of strings.
+- What I changed before approving: Fail invalid commands but allow others to pass.
+- Verification: Ran add_command with multiple commands (valid and/or invalid) and ensure only valid ones pass.
+- One thing I learned: I need to work with AI to consider everything.
+

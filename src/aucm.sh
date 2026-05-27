@@ -25,62 +25,77 @@ list_commands() {
     cat "$DB_FILE"
 }
 
-# Add a command to the database
+# Add command(s) to the database
 # Usage: add_command <command_string>
 add_command() {
-    local cmd="$1"
+    local raw_input="$1"
     
-    # Trim whitespace
-    cmd=$(echo "$cmd" | xargs)
+    # Split by comma
+    IFS=',' read -ra cmd_array <<< "$raw_input"
     
-    if [[ -z "$cmd" ]]; then
-        echo "Error: Command cannot be empty."
-        return 1
-    fi
+    for cmd in "${cmd_array[@]}"; do
+        # Trim whitespace
+        cmd=$(echo "$cmd" | xargs)
+        
+        if [[ -z "$cmd" ]]; then
+            continue
+        fi
 
-    # Injection check: reject shell metacharacters
-    # This prevents ; | & < > $ ` ( ) \ and prevents arbitrary subshells or chained commands
-    local injection_pattern='[;&|<>$`()\\]'
-    if [[ "$cmd" =~ $injection_pattern ]]; then
-        echo "Error: '$cmd' contains invalid characters (injection attempt detected)."
-        return 1
-    fi
+        # Injection check: reject shell metacharacters
+        # This prevents ; | & < > $ ` ( ) \ and prevents arbitrary subshells or chained commands
+        local injection_pattern='[;&|<>$`()\\]'
+        if [[ "$cmd" =~ $injection_pattern ]]; then
+            echo "Error: '$cmd' contains invalid characters (injection attempt detected)."
+            continue
+        fi
 
-    # Dry-run validation: Check if the first word is a valid executable
-    local base_cmd
-    base_cmd=$(echo "$cmd" | awk '{print $1}')
-    
-    if ! command -v "$base_cmd" >/dev/null 2>&1; then
-        echo "Error: '$base_cmd' is not a valid executable on this system."
-        return 1
-    fi
+        # Dry-run validation: Check if the first word is a valid executable
+        local base_cmd
+        base_cmd=$(echo "$cmd" | awk '{print $1}')
+        
+        if ! command -v "$base_cmd" >/dev/null 2>&1; then
+            echo "Error: '$base_cmd' is not a valid executable on this system."
+            continue
+        fi
 
-    # Check for duplicates
-    if grep -Fxq "$cmd" "$DB_FILE"; then
-        echo "Command '$cmd' is already in the database."
-        return 0
-    fi
+        # Check for duplicates
+        if grep -Fxq "$cmd" "$DB_FILE"; then
+            echo "Command '$cmd' is already in the database."
+            continue
+        fi
 
-    echo "$cmd" >> "$DB_FILE"
-    echo "Added: $cmd"
+        echo "$cmd" >> "$DB_FILE"
+        echo "Added: $cmd"
+    done
 }
 
-# Remove a command from the database
+# Remove command(s) from the database
 # Usage: remove_command <command_string>
 remove_command() {
-    local cmd="$1"
+    local raw_input="$1"
     
-    if grep -Fxq "$cmd" "$DB_FILE"; then
-        # Use a temporary file for safety
-        local temp_db
-        temp_db=$(mktemp)
-        grep -Fvx "$cmd" "$DB_FILE" > "$temp_db"
-        mv "$temp_db" "$DB_FILE"
-        echo "Removed: $cmd"
-    else
-        echo "Error: Command '$cmd' not found in database."
-        return 1
-    fi
+    # Split by comma
+    IFS=',' read -ra cmd_array <<< "$raw_input"
+    
+    for cmd in "${cmd_array[@]}"; do
+        # Trim whitespace
+        cmd=$(echo "$cmd" | xargs)
+        
+        if [[ -z "$cmd" ]]; then
+            continue
+        fi
+
+        if grep -Fxq "$cmd" "$DB_FILE"; then
+            # Use a temporary file for safety
+            local temp_db
+            temp_db=$(mktemp)
+            grep -Fvx "$cmd" "$DB_FILE" > "$temp_db"
+            mv "$temp_db" "$DB_FILE"
+            echo "Removed: $cmd"
+        else
+            echo "Error: Command '$cmd' not found in database."
+        fi
+    done
 }
 
 # Clear all commands
