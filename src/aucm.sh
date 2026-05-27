@@ -71,3 +71,31 @@ clear_commands() {
     > "$DB_FILE"
     echo "All commands cleared."
 }
+
+# Run all updates stored in the database
+run_all_updates() {
+    if [[ ! -s "$DB_FILE" ]]; then
+        echo "No commands to run."
+        return 0
+    fi
+
+    echo "--- Starting Update Sequence ---"
+    local total_commands
+    total_commands=$(wc -l < "$DB_FILE" | xargs)
+    local current=0
+
+    while IFS= read -r cmd; do
+        current=$((current + 1))
+        echo "[$current/$total_commands] Executing: $cmd"
+        
+        # Execute the command
+        if bash -c "$cmd"; then
+            echo "Success: $cmd"
+        else
+            echo "Error: Command failed with exit code $?: $cmd"
+        fi
+        echo "--------------------------------"
+    done < "$DB_FILE"
+
+    echo "--- Update Sequence Complete ---"
+}
