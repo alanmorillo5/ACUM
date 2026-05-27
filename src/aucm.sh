@@ -30,8 +30,19 @@ list_commands() {
 add_command() {
     local cmd="$1"
     
+    # Trim whitespace
+    cmd=$(echo "$cmd" | xargs)
+    
     if [[ -z "$cmd" ]]; then
         echo "Error: Command cannot be empty."
+        return 1
+    fi
+
+    # Injection check: reject shell metacharacters
+    # This prevents ; | & < > $ ` ( ) \ and prevents arbitrary subshells or chained commands
+    local injection_pattern='[;&|<>$`()\\]'
+    if [[ "$cmd" =~ $injection_pattern ]]; then
+        echo "Error: '$cmd' contains invalid characters (injection attempt detected)."
         return 1
     fi
 
@@ -286,7 +297,7 @@ main_menu() {
 # Entry point for daemon and script execution
 if [[ "$1" == "--run-daemon-loop" ]]; then
     daemon_loop
-else
-    # Start the interactive dashboard by default
+elif [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # Start the interactive dashboard only if run directly, not sourced
     main_menu
 fi

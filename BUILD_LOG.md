@@ -35,3 +35,9 @@
 - Verification: Ran the dashboard myself and tested each feature.
 - One thing I learned: AI is very effective at frontend development.
 
+## Task 9 - Edge Cases:
+- Brief: Ensure invalid commands are tested before adding to the database, and handle other edge cases such as empty strings and injections.
+- What Gemini proposed: Bulk processing, gracefully handle whitespace and empty strings, prevent injection using regex.
+- What I changed before approving: Remove bulk processing, will get to that later.
+- Verification: Ran the dashboard and tried to add several malicious and invalid commands.
+- One thing I learned: The AI tried to test by adding an exteremely risky command, so don't always trust the tests.
