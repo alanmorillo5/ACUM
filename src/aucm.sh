@@ -3,8 +3,9 @@
 # AUCM Database Controller
 # Manages the command list for the Auto-Update CLI Manager
 
-# Path to the database file
-DB_FILE="$(dirname "$0")/../data/commands.db"
+# Path to the database file (absolute path)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DB_FILE="$SCRIPT_DIR/../data/commands.db"
 
 # Ensure data directory exists
 mkdir -p "$(dirname "$DB_FILE")"
@@ -99,3 +100,60 @@ run_all_updates() {
 
     echo "--- Update Sequence Complete ---"
 }
+
+# Daemon loop that runs in the background
+daemon_loop() {
+    # Default interval: 7 days in seconds (604800)
+    local interval=604800
+    
+    while true; do
+        run_all_updates >> "$(dirname "$DB_FILE")/daemon.log" 2>&1
+        sleep "$interval"
+    done
+}
+
+# Start the background daemon
+start_daemon() {
+    local pid_file="$(dirname "$DB_FILE")/aucm.pid"
+    
+    if [[ -f "$pid_file" ]]; then
+        local pid
+        pid=$(cat "$pid_file")
+        if ps -p "$pid" > /dev/null; then
+            echo "Daemon is already running (PID: $pid)."
+            return 1
+        fi
+    fi
+
+    echo "Starting background daemon..."
+    nohup bash "$0" --run-daemon-loop > /dev/null 2>&1 &
+    echo $! > "$pid_file"
+    echo "Daemon started (PID: $(cat "$pid_file"))."
+}
+
+# Stop the background daemon
+stop_daemon() {
+    local pid_file="$(dirname "$DB_FILE")/aucm.pid"
+    
+    if [[ ! -f "$pid_file" ]]; then
+        echo "Daemon is not running (no PID file found)."
+        return 1
+    fi
+
+    local pid
+    pid=$(cat "$pid_file")
+    if ps -p "$pid" > /dev/null; then
+        echo "Stopping daemon (PID: $pid)..."
+        kill "$pid"
+        rm "$pid_file"
+        echo "Daemon stopped."
+    else
+        echo "Daemon is not running (PID $pid not found). Cleaning up PID file."
+        rm "$pid_file"
+    fi
+}
+
+# Entry point for daemon and script execution
+if [[ "$1" == "--run-daemon-loop" ]]; then
+    daemon_loop
+fi
