@@ -189,7 +189,104 @@ stop_daemon() {
     fi
 }
 
+# --- CLI Dashboard ---
+
+show_dashboard() {
+    clear
+    echo "========================================"
+    echo "       Auto-Update CLI Manager (AUCM)   "
+    echo "========================================"
+    
+    local state
+    state=$(cat "$STATE_FILE" 2>/dev/null || echo "OFF")
+    
+    local count
+    count=$(grep -c "^" "$DB_FILE" 2>/dev/null || echo "0")
+    count=$(echo "$count" | xargs) # Trim whitespace
+    
+    # We use a default 7 days for now until time parsing is added
+    echo " Update Period:       7 days"
+    echo " Auto-Update Status:  $state"
+    echo " Tracked Commands:    $count"
+    echo "========================================"
+    echo " 1. Add command(s) / dependency"
+    echo " 2. Remove command(s) / dependency"
+    echo " 3. Clear all commands"
+    echo " 4. Toggle auto-update (ON/OFF)"
+    echo " 5. Set update period (Coming Soon)"
+    echo " 6. Run all updates now"
+    echo " 7. Display all stored commands"
+    echo " 8. Exit"
+    echo "========================================"
+}
+
+main_menu() {
+    while true; do
+        show_dashboard
+        read -p "Select an option [1-8]: " choice
+        
+        case $choice in
+            1)
+                echo "Enter the command(s) to add (e.g., 'brew upgrade node'):"
+                read -p "> " input_cmd
+                add_command "$input_cmd"
+                read -p "Press Enter to continue..."
+                ;;
+            2)
+                echo "Enter the exact command to remove:"
+                read -p "> " input_cmd
+                remove_command "$input_cmd"
+                read -p "Press Enter to continue..."
+                ;;
+            3)
+                read -p "Are you sure you want to clear all commands? (y/n): " confirm
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    clear_commands
+                fi
+                read -p "Press Enter to continue..."
+                ;;
+            4)
+                toggle_auto_update
+                # Sync daemon with new state
+                local current_state
+                current_state=$(cat "$STATE_FILE" 2>/dev/null || echo "OFF")
+                if [[ "$current_state" == "ON" ]]; then
+                    start_daemon
+                else
+                    stop_daemon
+                fi
+                read -p "Press Enter to continue..."
+                ;;
+            5)
+                echo "Setting update period is not yet implemented."
+                read -p "Press Enter to continue..."
+                ;;
+            6)
+                run_all_updates
+                read -p "Press Enter to continue..."
+                ;;
+            7)
+                echo "--- Stored Commands ---"
+                list_commands
+                echo "-----------------------"
+                read -p "Press Enter to continue..."
+                ;;
+            8)
+                echo "Exiting AUCM Dashboard."
+                exit 0
+                ;;
+            *)
+                echo "Invalid option. Please enter a number between 1 and 8."
+                read -p "Press Enter to continue..."
+                ;;
+        esac
+    done
+}
+
 # Entry point for daemon and script execution
 if [[ "$1" == "--run-daemon-loop" ]]; then
     daemon_loop
+else
+    # Start the interactive dashboard by default
+    main_menu
 fi

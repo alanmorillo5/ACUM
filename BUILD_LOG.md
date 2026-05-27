@@ -22,8 +22,16 @@
 - One thing I learned: AI sometimes forgets that something doesn't work.
 
 ## Task 6 - Daemon Toggle
-- Breif: Add a toggle to turn the auto-update script on and off.
+- Brief: Add a toggle to turn the auto-update script on and off.
 - What Gemini proposed: Add a state file to track daemon state, add a script that toggles daemon on and off.
 - What I changed before approving: Nothing.
 - Verification: Tested toggle with active echo statements to check. Kill terminal and retest to ensure state preservation.
 - One thing I learned: Need to start killing the terminal to test if states preserve.
+
+## Task 7/8 - Frontend
+- Brief: Add a front-end CLI dashboard with an initial menu, bound to numbers: add command, remove command, clear all commands, toggle auto-update, set update period, run all updates once, display all commands, exit. Add requests for each menu option.
+- What Gemini proposed: Adding a dashboard with everything I asked EXCEPT period updates. Will implement later.
+- What I changed before approving: Nothing.
+- Verification: Ran the dashboard myself and tested each feature.
+- One thing I learned: AI is very effective at frontend development.
+
