@@ -1,7 +1,7 @@
 # Tasks:
 
 ## Task 3 - Command Database
-- Breif: Create a list of shell commands that can be run in the CLI and store it in a lightweight database.
+- Brief: Create a list of shell commands that can be run in the CLI and store it in a lightweight database.
 - What Gemini proposed: Flat-file database with functions add_command, list_commands, and remove_commands
 - What I changed before approving: Nothing
 - Verification: Developed bash script to test all commands with echo statements. Worked perfectly.
@@ -35,17 +35,23 @@
 - Verification: Ran the dashboard myself and tested each feature.
 - One thing I learned: AI is very effective at frontend development.
 
-## Task 9 - Edge Cases:
+## Task 9 - Edge Cases
 - Brief: Ensure invalid commands are tested before adding to the database, and handle other edge cases such as empty strings and injections.
 - What Gemini proposed: Bulk processing, gracefully handle whitespace and empty strings, prevent injection using regex.
 - What I changed before approving: Remove bulk processing, will get to that later.
 - Verification: Ran the dashboard and tried to add several malicious and invalid commands.
 - One thing I learned: The AI tried to test by adding an exteremely risky command, so don't always trust the tests.
 
-## Task 10 - Multiple Commands:
+## Task 10 - Multiple Commands
 - Brief: Allow multiple commands to be added/removed in a single request by splitting commands by an appropriate delimeter.
 - What Gemini proposed: Separate by comma, refector add_command and remove_command to iterate over a list of strings.
 - What I changed before approving: Fail invalid commands but allow others to pass.
 - Verification: Ran add_command with multiple commands (valid and/or invalid) and ensure only valid ones pass.
 - One thing I learned: I need to work with AI to consider everything.
 
+## Task 11 - Time Parsing
+- Brief: Inside of setting update period, allow input of an integer followed by minutes, hours, days, or months (use regex).
+- What Gemini proposed: Add unit and value states for time, add frontend option to set time period and its corresponding backend function. Update daemon loop and display.
+What I changed before approving: don't forget to use singular nouns for the integer 1, and restart the daemon after updating period if necessary.
+- Verification: Run the new update_period function on frontend and backend to ensure time parsing works.
+- One thing I learned: AI can effectively run tests and correct it's own mistakes.

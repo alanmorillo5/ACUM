@@ -8,12 +8,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DB_FILE="$SCRIPT_DIR/../data/commands.db"
 STATE_FILE="$SCRIPT_DIR/../data/.aucm_state"
 LAST_RUN_FILE="$SCRIPT_DIR/../data/.last_run"
+INTERVAL_FILE="$SCRIPT_DIR/../data/.aucm_interval"
+INTERVAL_STR_FILE="$SCRIPT_DIR/../data/.aucm_interval_str"
 
 # Ensure data directory and default state exist
 mkdir -p "$(dirname "$DB_FILE")"
 touch "$DB_FILE"
 if [[ ! -f "$STATE_FILE" ]]; then
     echo "OFF" > "$STATE_FILE"
+fi
+if [[ ! -f "$INTERVAL_FILE" ]]; then
+    echo "604800" > "$INTERVAL_FILE" # 7 days
+fi
+if [[ ! -f "$INTERVAL_STR_FILE" ]]; then
+    echo "7 days" > "$INTERVAL_STR_FILE"
 fi
 
 # List all stored commands
@@ -148,13 +156,78 @@ toggle_auto_update() {
     fi
 }
 
+# Set the update period using regex validation
+# Usage: set_update_period "12 hours"
+set_update_period() {
+    local input="$1"
+    # Case-insensitive regex for integer + unit
+    local regex='^([0-9]+)[[:space:]]*(minutes?|mins?|hours?|hrs?|days?|months?)$'
+    
+    # We use shopt to make the regex match case-insensitive
+    local old_nocasematch
+    old_nocasematch=$(shopt -p nocasematch)
+    shopt -s nocasematch
+    
+    if [[ ! "$input" =~ $regex ]]; then
+        eval "$old_nocasematch"
+        echo "Error: Invalid period format. Use e.g., '12 hours' or '3 days'."
+        return 1
+    fi
+    
+    local value="${BASH_REMATCH[1]}"
+    local unit
+    unit=$(echo "${BASH_REMATCH[2]}" | tr '[:upper:]' '[:lower:]')
+    eval "$old_nocasematch"
+    local seconds=0
+    
+    # Handle singular/plural nouns for integer 1
+    if [[ "$value" -eq 1 ]]; then
+        case "$unit" in
+            minutes|mins) unit="minute" ;;
+            hours|hrs) unit="hour" ;;
+            days) unit="day" ;;
+            months) unit="month" ;;
+        esac
+    else
+        case "$unit" in
+            minute|min) unit="minutes" ;;
+            hour|hr) unit="hours" ;;
+            day) unit="days" ;;
+            month) unit="months" ;;
+        esac
+    fi
+    
+    case "$unit" in
+        minute|minutes|min|mins) seconds=$((value * 60)) ;;
+        hour|hours|hr|hrs) seconds=$((value * 3600)) ;;
+        day|days) seconds=$((value * 86400)) ;;
+        month|months) seconds=$((value * 2592000)) ;;
+    esac
+    
+    echo "$seconds" > "$INTERVAL_FILE"
+    echo "$value $unit" > "$INTERVAL_STR_FILE"
+    echo "Update period set to $value $unit ($seconds seconds)."
+    
+    # Restart daemon if running to apply new interval
+    local pid_file="$(dirname "$DB_FILE")/aucm.pid"
+    if [[ -f "$pid_file" ]]; then
+        local pid
+        pid=$(cat "$pid_file")
+        if ps -p "$pid" > /dev/null 2>&1; then
+            echo "Restarting daemon to apply new period..."
+            stop_daemon
+            start_daemon
+        fi
+    fi
+}
+
 # Daemon loop that runs in the background
 daemon_loop() {
-    # Default interval: 7 days in seconds (604800)
-    local interval=604800
     local poll_rate=60 # Check state every 60 seconds
     
     while true; do
+        local interval
+        interval=$(cat "$INTERVAL_FILE" 2>/dev/null || echo 604800)
         local state
         state=$(cat "$STATE_FILE" 2>/dev/null || echo "OFF")
         
@@ -230,8 +303,10 @@ show_dashboard() {
     count=$(grep -c "^" "$DB_FILE" 2>/dev/null || echo "0")
     count=$(echo "$count" | xargs) # Trim whitespace
     
-    # We use a default 7 days for now until time parsing is added
-    echo " Update Period:       7 days"
+    local period
+    period=$(cat "$INTERVAL_STR_FILE" 2>/dev/null || echo "7 days")
+    
+    echo " Update Period:       $period"
     echo " Auto-Update Status:  $state"
     echo " Tracked Commands:    $count"
     echo "========================================"
@@ -239,7 +314,7 @@ show_dashboard() {
     echo " 2. Remove command(s) / dependency"
     echo " 3. Clear all commands"
     echo " 4. Toggle auto-update (ON/OFF)"
-    echo " 5. Set update period (Coming Soon)"
+    echo " 5. Set update period"
     echo " 6. Run all updates now"
     echo " 7. Display all stored commands"
     echo " 8. Exit"
@@ -284,7 +359,9 @@ main_menu() {
                 read -p "Press Enter to continue..."
                 ;;
             5)
-                echo "Setting update period is not yet implemented."
+                echo "Enter the update period (e.g., '12 hours', '3 days', '1 month'):"
+                read -p "> " input_period
+                set_update_period "$input_period"
                 read -p "Press Enter to continue..."
                 ;;
             6)
