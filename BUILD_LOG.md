@@ -55,3 +55,10 @@
 What I changed before approving: don't forget to use singular nouns for the integer 1, and restart the daemon after updating period if necessary.
 - Verification: Run the new update_period function on frontend and backend to ensure time parsing works.
 - One thing I learned: AI can effectively run tests and correct it's own mistakes.
+
+## Task 12 - Elastic inputs
+- Brief: If possible, allow input of dependency names only and try to run it with different structures (eg. brew upgrade _, _ update, etc.).
+- What Gemini proposed: Detect for single word, check if dependency is installed, then run through a couple of common dependencies. If one can resolve, add it to the list.
+- What I changed before approving: Nothing.
+- Verification: Add single line commands and verify that they either find an upgrade command or pass naked. Ensure everything else works.
+- One thing I learned: AI knows a lot more features then I do.

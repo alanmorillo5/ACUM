@@ -57,6 +57,35 @@ add_command() {
             continue
         fi
 
+        # Smart Dependency Parsing: If single word, attempt to resolve package manager command
+        if [[ ! "$cmd" =~ [[:space:]] ]]; then
+            if ! command -v "$cmd" >/dev/null 2>&1; then
+                echo "Error: Dependency '$cmd' not found in PATH."
+                continue
+            fi
+            
+            local resolved=""
+            local exec_path
+            exec_path=$(command -v "$cmd")
+            
+            # Determine package manager based on environment/path
+            if [[ "$exec_path" == *"node_modules"* || "$exec_path" == *".nvm"* ]] && command -v npm >/dev/null 2>&1; then
+                resolved="npm update -g $cmd"
+            elif command -v brew >/dev/null 2>&1; then
+                resolved="brew upgrade $cmd"
+            elif command -v apt-get >/dev/null 2>&1; then
+                # Use -y to ensure background daemon doesn't block on interactive prompts
+                resolved="sudo apt-get --only-upgrade -y install $cmd"
+            fi
+            
+            if [[ -n "$resolved" ]]; then
+                echo "Smart parser resolved '$cmd' to: $resolved"
+                cmd="$resolved"
+            else
+                echo "Note: No automatic wrapper found for '$cmd'. Storing as raw command."
+            fi
+        fi
+
         # Dry-run validation: Check if the first word is a valid executable
         local base_cmd
         base_cmd=$(echo "$cmd" | awk '{print $1}')
