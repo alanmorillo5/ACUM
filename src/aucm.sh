@@ -335,8 +335,46 @@ show_dashboard() {
     local period
     period=$(cat "$INTERVAL_STR_FILE" 2>/dev/null || echo "7 days")
     
+    local next_run_display="N/A"
+    if [[ "$state" == "ON" ]]; then
+        local last_run
+        last_run=$(cat "$LAST_RUN_FILE" 2>/dev/null || echo 0)
+        local interval
+        interval=$(cat "$INTERVAL_FILE" 2>/dev/null || echo 604800)
+        
+        if [[ "$last_run" -eq 0 ]]; then
+            next_run_display="Pending run"
+        else
+            local now
+            now=$(date +%s)
+            local next_run=$((last_run + interval))
+            local time_left=$((next_run - now))
+            
+            if [[ $time_left -le 0 ]]; then
+                next_run_display="Due now"
+            else
+                local d=$((time_left / 86400))
+                local h=$(( (time_left % 86400) / 3600 ))
+                local m=$(( (time_left % 3600) / 60 ))
+                local s=$(( time_left % 60 ))
+                local time_str=""
+                [[ $d -gt 0 ]] && time_str+="${d}d "
+                [[ $h -gt 0 ]] && time_str+="${h}h "
+                [[ $m -gt 0 ]] && time_str+="${m}m "
+                [[ $s -gt 0 || -z "$time_str" ]] && time_str+="${s}s"
+                
+                # Trim trailing space
+                time_str=$(echo "$time_str" | xargs)
+                next_run_display="In $time_str"
+            fi
+        fi
+    else
+        next_run_display="Paused"
+    fi
+    
     echo " Update Period:       $period"
     echo " Auto-Update Status:  $state"
+    echo " Next Update Cycle:   $next_run_display"
     echo " Tracked Commands:    $count"
     echo "========================================"
     echo " 1. Add command(s) / dependency"

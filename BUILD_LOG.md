@@ -62,3 +62,10 @@ What I changed before approving: don't forget to use singular nouns for the inte
 - What I changed before approving: Nothing.
 - Verification: Add single line commands and verify that they either find an upgrade command or pass naked. Ensure everything else works.
 - One thing I learned: AI knows a lot more features then I do.
+
+## Task 13 - Relevent information
+- Brief: On the home page, display update period and other relevant information, such as maybe next update cycle.
+- What Gemini proposed: Display daemon state, last cycle, and next time.
+- What I changed before approcing: Nothing.
+- Verification: Check display for all different states and times. See if they're appropriate.
+- One thing I learned: Task-based AI coding is much more important than you think.
